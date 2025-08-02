@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-MODEL_NAME = "openai/gpt-3.5-turbo"
+MODEL_NAME = "openai/gpt-4-turbo"
 
 app = FastAPI()
 
