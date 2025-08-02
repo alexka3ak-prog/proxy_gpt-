@@ -1,10 +1,10 @@
 import os
-import time
+import requests
 from fastapi import FastAPI
 from pydantic import BaseModel
-from openai import OpenAI, RateLimitError
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+MODEL_NAME = "openai/gpt-3.5-turbo"
 
 app = FastAPI()
 
@@ -13,28 +13,28 @@ class AliceRequest(BaseModel):
     version: str
 
 @app.post("/")
-async def chat_with_gpt(alice_request: AliceRequest):
+async def handle_request(alice_request: AliceRequest):
     command = alice_request.request.get("command", "").strip()
-    print(f"[Команда от Алисы]: {command}")
 
     if not command:
         text = "Привет! Я готов ответить на твой вопрос."
     else:
         try:
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[{"role": "user", "content": command}],
-                max_tokens=50,
-                temperature=0.5
-            )
-            text = response.choices[0].message.content.strip()
-            print(f"[Ответ GPT]: {text}")
-        except RateLimitError:
-            print("[Ошибка]: Превышен лимит запросов (429)")
-            text = "Слишком много запросов. Попробуй позже."
+            headers = {
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            data = {
+                "model": MODEL_NAME,
+                "messages": [{"role": "user", "content": command}],
+                "max_tokens": 150,
+                "temperature": 0.7
+            }
+            response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data)
+            response.raise_for_status()
+            text = response.json()["choices"][0]["message"]["content"].strip()
         except Exception as e:
-            print(f"[Ошибка OpenAI]: {str(e)}")
-            text = "Что-то пошло не так. Попробуй позже."
+            text = "Не удалось получить ответ. Попробуй позже."
 
     return {
         "version": alice_request.version,
