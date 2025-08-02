@@ -41,3 +41,5 @@ async def chat_with_gpt(alice_request: AliceRequest):
         "response": {
             "text": text,
             "end_session": False
+        }
+    }
