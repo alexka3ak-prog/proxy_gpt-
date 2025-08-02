@@ -12,7 +12,7 @@ async def test_skill(alice_request: AliceRequest):
     return {
         "version": alice_request.version,
         "response": {
-            "text": "Привет! Это пидора ответ.",
+            "text": "Привет! Это пидора ответ. Заебали меня уже!",
             "end_session": False
         }
     }
