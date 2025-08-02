@@ -1,10 +1,9 @@
-
 import os
 from fastapi import FastAPI
 from pydantic import BaseModel
-import openai
+from openai import OpenAI
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI()
 
@@ -20,7 +19,7 @@ async def chat_with_gpt(alice_request: AliceRequest):
         text = "Привет! Я готов ответить на твой вопрос. Что хочешь узнать?"
     else:
         try:
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": command}],
                 max_tokens=200
