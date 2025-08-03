@@ -17,7 +17,7 @@ async def handle_request(alice_request: AliceRequest):
     command = alice_request.request.get("command", "").strip()
 
     if not command:
-        text = "Привет! Я готов ответить на твой вопрос."
+        text = "Привет Стёпа! Ты когда поедешь на озеро с папой?"
     else:
         try:
             headers = {
