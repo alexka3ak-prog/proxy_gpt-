@@ -12,6 +12,10 @@ class AliceRequest(BaseModel):
     request: dict
     version: str
 
+def build_tts(text: str) -> str:
+    # Оборачиваем текст в эмоцию "good"
+    return f'<emotion emotion="good" intensity="high">{text}</emotion>'
+
 @app.post("/")
 async def handle_request(alice_request: AliceRequest):
     command = alice_request.request.get("command", "").strip()
@@ -40,6 +44,7 @@ async def handle_request(alice_request: AliceRequest):
         "version": alice_request.version,
         "response": {
             "text": text,
+            "tts": build_tts(text),
             "end_session": False
         }
     }
