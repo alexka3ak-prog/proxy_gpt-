@@ -1,10 +1,20 @@
 import os
 import requests
+import random
 from fastapi import FastAPI
 from pydantic import BaseModel
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 MODEL_NAME = "openai/gpt-3.5-turbo"
+
+EMOTIONS = ["good", "evil", "neutral"]
+INTENSITIES = ["low", "medium", "high"]
+SOUNDS = [
+    '<speaker audio=\"alice-sounds-game-win-1.opus\"/>',
+    '<speaker audio=\"alice-sounds-things-bell-1.opus\"/>',
+    '<speaker audio=\"alice-sounds-game-lose-2.opus\"/>',
+    ''
+]
 
 app = FastAPI()
 
@@ -13,8 +23,10 @@ class AliceRequest(BaseModel):
     version: str
 
 def build_tts(text: str) -> str:
-    # Оборачиваем текст в эмоцию "good"
-    return f'<emotion emotion="good" intensity="high">{text}</emotion>'
+    emotion = random.choice(EMOTIONS)
+    intensity = random.choice(INTENSITIES)
+    sound = random.choice(SOUNDS)
+    return f'{sound}<break time=\"0.5s\"/><emotion emotion=\"{emotion}\" intensity=\"{intensity}\">{text}</emotion>'
 
 @app.post("/")
 async def handle_request(alice_request: AliceRequest):
@@ -48,3 +60,4 @@ async def handle_request(alice_request: AliceRequest):
             "end_session": False
         }
     }
+
