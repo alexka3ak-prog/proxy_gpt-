@@ -10,9 +10,9 @@ MODEL_NAME = "openai/gpt-3.5-turbo"
 EMOTIONS = ["good", "evil", "neutral"]
 INTENSITIES = ["low", "medium", "high"]
 SOUNDS = [
-    '<speaker audio=\"alice-sounds-game-win-1.opus\"/>',
-    '<speaker audio=\"alice-sounds-things-bell-1.opus\"/>',
-    '<speaker audio=\"alice-sounds-game-lose-2.opus\"/>',
+    '<speaker audio="alice-sounds-game-win-1.opus"/>',
+    '<speaker audio="alice-sounds-things-bell-1.opus"/>',
+    '<speaker audio="alice-sounds-game-lose-2.opus"/>',
     ''
 ]
 
@@ -26,7 +26,7 @@ def build_tts(text: str) -> str:
     emotion = random.choice(EMOTIONS)
     intensity = random.choice(INTENSITIES)
     sound = random.choice(SOUNDS)
-    return f'{sound}<break time=\"0.5s\"/><emotion emotion=\"{emotion}\" intensity=\"{intensity}\">{text}</emotion>'
+    return f'{sound}<break time="0.5s"/><emotion emotion="{emotion}" intensity="{intensity}">{text}</emotion>'
 
 @app.post("/")
 async def handle_request(alice_request: AliceRequest):
