@@ -26,7 +26,8 @@ def build_tts(text: str) -> str:
     emotion = random.choice(EMOTIONS)
     intensity = random.choice(INTENSITIES)
     sound = random.choice(SOUNDS)
-    return f'{sound}<break time="0.5s"/><emotion emotion="{emotion}" intensity="{intensity}">{text}</emotion>'
+    ssml = f'{sound}<break time="0.5s"/><emotion emotion="{emotion}" intensity="{intensity}">{text}</emotion>'
+    return f'<speak>{ssml}</speak>'
 
 @app.post("/")
 async def handle_request(alice_request: AliceRequest):
