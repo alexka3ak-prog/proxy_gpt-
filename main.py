@@ -67,12 +67,12 @@ async def handle_request(alice_request: AliceRequest):
 
     current_mode = sessions[session_key]["mode"]
 
-    
+
     if "спасибо" in command:
         points = sessions[session_key].get("points", 0) + 1
         sessions[session_key]["points"] = points
 save_sessions()
-        
+
     if "сюрприз" in command:
         points = sessions[session_key].get("points", 0)
         if points >= 5:
@@ -128,7 +128,7 @@ return {
                 }
             }
 
-    
+
             "version": alice_request.version,
             "response": {
                 "text": f"Мур-р! Обожаю вежливых людей! Тебе +1 балл! Всего: {points}",
@@ -140,7 +140,7 @@ return {
 
     if "баллов" in command:
         points = sessions[session_key].get("points", 0)
-        
+
     if "сюрприз" in command:
         points = sessions[session_key].get("points", 0)
         if points >= 5:
@@ -196,11 +196,11 @@ return {
                 }
             }
 
-    
+
             "version": alice_request.version,
             "response": {
                 "text": f"У тебя {points} котобаллов. Мур-р!",
-                
+
     "tts": f"У тебя {points} котобаллов. Мур-р!",
     "buttons": [{"title": "Сюрприз!"}] if points >= 5 else []
 ,
@@ -210,7 +210,7 @@ return {
 
     if any(word in command for word in STOP_COMMANDS):
 
-        
+
     if "сюрприз" in command:
         points = sessions[session_key].get("points", 0)
         if points >= 5:
@@ -266,12 +266,12 @@ return {
                 }
             }
 
-    
+
             "version": alice_request.version,
-            
+
     "response": {
         "buttons": [{"title": "Поменять режим"}, {"title": "Сколько у меня баллов?"}],
-    
+
                 "text": "Мяу! До встречи, человек!",
                 "tts": "Мяу! До встречи, человек!",
                 "end_session": True
@@ -281,7 +281,7 @@ return {
     for mode in MODES:
         if f"режим {mode}" in command or f"включи {mode}" in command:
             sessions[session_key]["mode"] = mode
-            
+
     if "сюрприз" in command:
         points = sessions[session_key].get("points", 0)
         if points >= 5:
@@ -337,12 +337,12 @@ return {
                 }
             }
 
-    
+
                 "version": alice_request.version,
-                
+
     "response": {
         "buttons": [{"title": "Поменять режим"}, {"title": "Сколько у меня баллов?"}],
-    
+
                     "text": f"Кот переключился в режим «{mode}».",
                     "tts": f"Теперь я говорю как {mode} кот.",
                     "end_session": False
@@ -382,10 +382,10 @@ save_sessions()
 
     json_response = {
         "version": alice_request.version,
-        
+
     "response": {
         "buttons": [{"title": "Поменять режим"}, {"title": "Сколько у меня баллов?"}],
-    
+
             "text": text,
             "tts": build_tts(text, sessions[session_key]["mode"], command),
             "end_session": False
