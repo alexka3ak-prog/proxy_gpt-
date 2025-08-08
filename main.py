@@ -1,4 +1,5 @@
-mport requests
+import os
+import requests
 from fastapi import FastAPI
 from pydantic import BaseModel
 
