@@ -1,18 +1,10 @@
 import os
 import requests
-import random
 from fastapi import FastAPI
 from pydantic import BaseModel
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 MODEL_NAME = "openai/gpt-3.5-turbo"
-
-SOUNDS = [
-    '<speaker audio="alice-sounds-game-win-1.opus"/>',
-    '<speaker audio="alice-sounds-things-bell-1.opus"/>',
-    '<speaker audio="alice-sounds-game-lose-2.opus"/>',
-    ''
-]
 
 app = FastAPI()
 
@@ -21,15 +13,17 @@ class AliceRequest(BaseModel):
     version: str
 
 def build_tts(text: str) -> str:
-    sound = random.choice(SOUNDS)
-    return f'<speak>{sound}<break time="0.5s"/>{text}</speak>'
+    # Префикс от имени кота
+    prefix = "Мяу! Кот подсказывает: "
+    full_text = f"{prefix}{text}"
+    return f"<speak>{full_text}</speak>"
 
 @app.post("/")
 async def handle_request(alice_request: AliceRequest):
     command = alice_request.request.get("command", "").strip()
 
     if not command:
-        text = "Привет! Я готов ответить на твой вопрос."
+        text = "Привет! Можешь задать мне любой вопрос, мурр."
     else:
         try:
             headers = {
@@ -46,7 +40,7 @@ async def handle_request(alice_request: AliceRequest):
             response.raise_for_status()
             text = response.json()["choices"][0]["message"]["content"].strip()
         except Exception as e:
-            text = "Не удалось получить ответ. Попробуй позже."
+            text = "Мяу... Что-то пошло не так. Попробуй ещё раз."
 
     return {
         "version": alice_request.version,
