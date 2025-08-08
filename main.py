@@ -13,7 +13,6 @@ class AliceRequest(BaseModel):
     version: str
 
 def build_tts(text: str) -> str:
-    # Префикс от имени кота
     prefix = "Мяу! Кот подсказывает: "
     full_text = f"{prefix}{text}"
     return f"<speak>{full_text}</speak>"
@@ -42,7 +41,7 @@ async def handle_request(alice_request: AliceRequest):
         except Exception as e:
             text = "Мяу... Что-то пошло не так. Попробуй ещё раз."
 
-    return {
+    json_response = {
         "version": alice_request.version,
         "response": {
             "text": text,
@@ -50,3 +49,8 @@ async def handle_request(alice_request: AliceRequest):
             "end_session": False
         }
     }
+
+    print("Ответ Алисе:", json_response)
+
+    return json_response
+
