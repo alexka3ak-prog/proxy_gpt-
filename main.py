@@ -7,8 +7,6 @@ from pydantic import BaseModel
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 MODEL_NAME = "openai/gpt-3.5-turbo"
 
-EMOTIONS = ["good", "evil", "neutral"]
-INTENSITIES = ["low", "medium", "high"]
 SOUNDS = [
     '<speaker audio="alice-sounds-game-win-1.opus"/>',
     '<speaker audio="alice-sounds-things-bell-1.opus"/>',
@@ -23,11 +21,8 @@ class AliceRequest(BaseModel):
     version: str
 
 def build_tts(text: str) -> str:
-    emotion = random.choice(EMOTIONS)
-    intensity = random.choice(INTENSITIES)
     sound = random.choice(SOUNDS)
-    ssml = f'{sound}<break time="0.5s"/><emotion emotion="{emotion}" intensity="{intensity}">{text}</emotion>'
-    return f'<speak>{ssml}</speak>'
+    return f'<speak>{sound}<break time="0.5s"/>{text}</speak>'
 
 @app.post("/")
 async def handle_request(alice_request: AliceRequest):
@@ -61,4 +56,3 @@ async def handle_request(alice_request: AliceRequest):
             "end_session": False
         }
     }
-
