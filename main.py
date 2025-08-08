@@ -1,5 +1,4 @@
-import os
-import requests
+mport requests
 from fastapi import FastAPI
 from pydantic import BaseModel
 
@@ -14,8 +13,7 @@ class AliceRequest(BaseModel):
 
 def build_tts(text: str) -> str:
     prefix = "Мяу! Кот подсказывает: "
-    full_text = f"{prefix}{text}"
-    return f"<speak>{full_text}</speak>"
+    return f"{prefix}{text}"  # Без <speak>, обычная строка
 
 @app.post("/")
 async def handle_request(alice_request: AliceRequest):
@@ -51,6 +49,5 @@ async def handle_request(alice_request: AliceRequest):
     }
 
     print("Ответ Алисе:", json_response)
-
     return json_response
 
