@@ -1,81 +1,71 @@
-
+from fastapi import FastAPI, Request
 import os
 import requests
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+import random
 
 app = FastAPI()
 
-STOP_WORDS = ["пока", "стоп", "хватит", "выход", "до свидания"]
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_PROXY_URL = os.getenv("OPENAI_PROXY_URL", "https://api.openai.com/v1/chat/completions")
 
-def ask_llm(prompt: str) -> str:
-    api_url = os.getenv("OPENAI_PROXY_URL", "https://openrouter.ai/api/v1/chat/completions")
-    api_key = os.getenv("OPENAI_API_KEY", "")
-    if not api_key:
-        return "Мяу... Ключ API не настроен. Попроси человека добавить OPENAI_API_KEY."
+cat_phrases = [
+    "Мяу! Чем могу помочь, человек?",
+    "Мурр... расскажи мне что-нибудь интересное.",
+    "Хвост трубой! Что спросишь сегодня?",
+    "Мурлыкаю от радости тебя слышать!",
+    "Мяу! Давай поболтаем!"
+]
 
-    model = "openai/gpt-3.5-turbo" if "openrouter.ai" in api_url else "gpt-3.5-turbo"
+cat_sounds = [
+    "Мяу-мяу!",
+    "Муррр!",
+    "Прыг на коленки!",
+    "Шшш... я думаю...",
+    "Хлоп-хлоп лапками!"
+]
+
+def ask_chatgpt(question: str) -> str:
+    if not OPENAI_API_KEY:
+        return random.choice(cat_phrases) + " " + random.choice(cat_sounds)
 
     headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
+        "Authorization": f"Bearer {OPENAI_API_KEY}",
+        "Content-Type": "application/json"
     }
-    if "openrouter.ai" in api_url:
-        headers["HTTP-Referer"] = os.getenv("PUBLIC_REFERER", "https://example.com")
-        headers["X-Title"] = os.getenv("APP_TITLE", "Yandex Cat Skill")
 
-    data = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": "Отвечай кратко и дружелюбно, как кот-ассистент. В начале ответа избегай лишних междометий."},
-            {"role": "user", "content": prompt}
-        ],
+    payload = {
+        "model": "gpt-3.5-turbo",
+        "messages": [{"role": "user", "content": question}],
         "temperature": 0.7,
-        "max_tokens": 300
+        "max_tokens": 150
     }
 
     try:
-        r = requests.post(api_url, headers=headers, json=data, timeout=15)
-        r.raise_for_status()
-        return r.json()["choices"][0]["message"]["content"].strip()
-    except requests.HTTPError as e:
-        try:
-            body = e.response.json()
-        except Exception:
-            body = e.response.text if e.response is not None else ""
-        return f"Мяу... LLM ответил ошибкой {e.response.status_code}. {body}"
-    except Exception as e:
-        return f"Мяу... не могу связаться с моделью: {e}"
+        r = requests.post(OPENAI_PROXY_URL, headers=headers, json=payload, timeout=10)
+        if r.status_code == 200:
+            data = r.json()
+            return data["choices"][0]["message"]["content"].strip()
+        else:
+            return random.choice(cat_phrases) + " " + random.choice(cat_sounds)
+    except Exception:
+        return random.choice(cat_phrases) + " " + random.choice(cat_sounds)
 
 @app.post("/")
-async def handle(request: Request):
-    event = await request.json()
-    req = event.get("request", {})
-
-    command = (req.get("command") or "").strip()
-    original = (req.get("original_utterance") or "").strip()
-
-    print(">> command:", command, "| original:", original)
+async def handler(request: Request):
+    body = await request.json()
+    command = body.get("request", {}).get("command", "").strip()
 
     if not command:
-        text = "Привет! Я кот-ассистент. Спроси меня о чём угодно."
-    elif any(w in command.lower() for w in STOP_WORDS):
-        return JSONResponse({
-            "version": event.get("version", "1.0"),
-            "response": {"text": "Мяу! До встречи!", "tts": "Мяу! До встречи!", "end_session": True}
-        })
+        answer = random.choice(cat_phrases)
     else:
-        text = ask_llm(command)
-
-    tts = f"Мяу! Кот подсказывает: {text}"
+        answer = ask_chatgpt(command)
 
     response = {
-        "version": event.get("version", "1.0"),
+        "version": body.get("version", "1.0"),
         "response": {
-            "text": text,
-            "tts": tts,
+            "text": answer,
+            "tts": answer,
             "end_session": False
         }
     }
-    print("<< response:", response)
-    return JSONResponse(response)
+    return response
