@@ -1,71 +1,65 @@
-from fastapi import FastAPI, Request
+
 import os
+import logging
 import requests
-import random
+from fastapi import FastAPI, Request
 
 app = FastAPI()
+
+logging.basicConfig(level=logging.INFO)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_PROXY_URL = os.getenv("OPENAI_PROXY_URL", "https://api.openai.com/v1/chat/completions")
 
-cat_phrases = [
-    "Мяу! Чем могу помочь, человек?",
-    "Мурр... расскажи мне что-нибудь интересное.",
-    "Хвост трубой! Что спросишь сегодня?",
-    "Мурлыкаю от радости тебя слышать!",
-    "Мяу! Давай поболтаем!"
-]
-
-cat_sounds = [
-    "Мяу-мяу!",
-    "Муррр!",
-    "Прыг на коленки!",
-    "Шшш... я думаю...",
-    "Хлоп-хлоп лапками!"
-]
+def cat_fallback():
+    return "Мяу! Я кот-ассистент, но у меня нет доступа к ChatGPT. Задай мне что-нибудь простое!"
 
 def ask_chatgpt(question: str) -> str:
     if not OPENAI_API_KEY:
-        return random.choice(cat_phrases) + " " + random.choice(cat_sounds)
-
-    headers = {
-        "Authorization": f"Bearer {OPENAI_API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "model": "gpt-3.5-turbo",
-        "messages": [{"role": "user", "content": question}],
-        "temperature": 0.7,
-        "max_tokens": 150
-    }
-
+        return cat_fallback()
     try:
-        r = requests.post(OPENAI_PROXY_URL, headers=headers, json=payload, timeout=10)
-        if r.status_code == 200:
-            data = r.json()
-            return data["choices"][0]["message"]["content"].strip()
+        headers = {
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": "gpt-3.5-turbo" if "openai.com" in OPENAI_PROXY_URL else "openai/gpt-3.5-turbo",
+            "messages": [{"role": "user", "content": question}],
+            "max_tokens": 200,
+            "temperature": 0.7
+        }
+        # Helpful headers for OpenRouter (ignored by OpenAI)
+        if "openrouter.ai" in OPENAI_PROXY_URL:
+            headers["HTTP-Referer"] = os.getenv("PUBLIC_REFERER", "https://example.com")
+            headers["X-Title"] = os.getenv("APP_TITLE", "Yandex Cat Skill")
+
+        resp = requests.post(OPENAI_PROXY_URL, headers=headers, json=data, timeout=15)
+        if resp.status_code == 200:
+            return resp.json()["choices"][0]["message"]["content"].strip()
         else:
-            return random.choice(cat_phrases) + " " + random.choice(cat_sounds)
-    except Exception:
-        return random.choice(cat_phrases) + " " + random.choice(cat_sounds)
+            logging.error(f"OpenAI-like API error {resp.status_code}: {resp.text}")
+            return cat_fallback()
+    except Exception as e:
+        logging.exception("Exception while calling LLM")
+        return cat_fallback()
 
 @app.post("/")
-async def handler(request: Request):
-    body = await request.json()
-    command = body.get("request", {}).get("command", "").strip()
+async def yandex_handler(request: Request):
+    event = await request.json()
+    command = (event.get("request", {}) or {}).get("command", "") or ""
 
-    if not command:
-        answer = random.choice(cat_phrases)
+    if not command.strip():
+        text = "Привет! Я кот-ассистент. Задай мне вопрос, и я постараюсь ответить."
     else:
-        answer = ask_chatgpt(command)
+        text = ask_chatgpt(command.strip())
 
-    response = {
-        "version": body.get("version", "1.0"),
+    logging.info(f"Ответ Алисе: {text}")
+
+    return {
+        "version": event.get("version", "1.0"),
         "response": {
-            "text": answer,
-            "tts": answer,
+            "text": text,
+            "tts": text,
             "end_session": False
         }
     }
-    return response
