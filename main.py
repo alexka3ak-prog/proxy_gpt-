@@ -1,92 +1,81 @@
 
 import os
-import json
 import requests
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
-SESSIONS_FILE = "sessions.json"
-if os.path.exists(SESSIONS_FILE):
-    with open(SESSIONS_FILE, "r", encoding="utf-8") as f:
-        sessions = json.load(f)
-else:
-    sessions = {}
+STOP_WORDS = ["пока", "стоп", "хватит", "выход", "до свидания"]
 
-def save_sessions():
-    with open(SESSIONS_FILE, "w", encoding="utf-8") as f:
-        json.dump(sessions, f, ensure_ascii=False, indent=2)
-
-def get_level(points):
-    if points >= 30:
-        return "кото-магистр 🧙‍♂️"
-    elif points >= 20:
-        return "кото-мастер"
-    elif points >= 10:
-        return "кото-ученик"
-    else:
-        return "котёнок"
-
-def ask_openai(question: str) -> str:
+def ask_llm(prompt: str) -> str:
     api_url = os.getenv("OPENAI_PROXY_URL", "https://openrouter.ai/api/v1/chat/completions")
     api_key = os.getenv("OPENAI_API_KEY", "")
+    if not api_key:
+        return "Мяу... Ключ API не настроен. Попроси человека добавить OPENAI_API_KEY."
+
+    model = "openai/gpt-3.5-turbo" if "openrouter.ai" in api_url else "gpt-3.5-turbo"
+
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
+    if "openrouter.ai" in api_url:
+        headers["HTTP-Referer"] = os.getenv("PUBLIC_REFERER", "https://example.com")
+        headers["X-Title"] = os.getenv("APP_TITLE", "Yandex Cat Skill")
+
     data = {
-        "model": "gpt-3.5-turbo",
-        "messages": [{"role": "user", "content": question}],
+        "model": model,
+        "messages": [
+            {"role": "system", "content": "Отвечай кратко и дружелюбно, как кот-ассистент. В начале ответа избегай лишних междометий."},
+            {"role": "user", "content": prompt}
+        ],
         "temperature": 0.7,
+        "max_tokens": 300
     }
 
     try:
-        r = requests.post(api_url, headers=headers, json=data, timeout=10)
+        r = requests.post(api_url, headers=headers, json=data, timeout=15)
         r.raise_for_status()
         return r.json()["choices"][0]["message"]["content"].strip()
+    except requests.HTTPError as e:
+        try:
+            body = e.response.json()
+        except Exception:
+            body = e.response.text if e.response is not None else ""
+        return f"Мяу... LLM ответил ошибкой {e.response.status_code}. {body}"
     except Exception as e:
-        return f"Мяу? Что-то пошло не так... ({e})"
+        return f"Мяу... не могу связаться с моделью: {e}"
 
 @app.post("/")
 async def handle(request: Request):
     event = await request.json()
-    command = event.get("request", {}).get("command", "").lower().strip()
-    session_key = event.get("session", {}).get("user_id", "default")
+    req = event.get("request", {})
 
-    if session_key not in sessions:
-        sessions[session_key] = {"points": 0}
-        save_sessions()
+    command = (req.get("command") or "").strip()
+    original = (req.get("original_utterance") or "").strip()
 
-    response_text = "Мяу! Кот подсказывает: Привет! Можешь задать мне любой вопрос, мурр."
+    print(">> command:", command, "| original:", original)
 
     if not command:
-        response_text = "Мяу! Кот подсказывает: Привет! Можешь задать мне любой вопрос, мурр."
-    elif "спасибо" in command:
-        points = sessions[session_key].get("points", 0) + 1
-        sessions[session_key]["points"] = points
-        save_sessions()
-        response_text = f"Мур-р! Обожаю вежливых людей! Тебе +1 балл! У тебя теперь {points} баллов."
-    elif "баллов" in command or "очки" in command or "сколько" in command:
-        points = sessions[session_key].get("points", 0)
-        level = get_level(points)
-        response_text = f"У тебя {points} баллов. Твой уровень: {level}."
-    elif "сюрприз" in command:
-        points = sessions[session_key].get("points", 0)
-        if points >= 5:
-            sessions[session_key]["points"] = points - 5
-            save_sessions()
-            response_text = "Ты получил виртуальную рыбку и обнимашки от кота! -5 баллов списано."
-        else:
-            response_text = "Недостаточно баллов для сюрприза. Нужно минимум 5."
+        text = "Привет! Я кот-ассистент. Спроси меня о чём угодно."
+    elif any(w in command.lower() for w in STOP_WORDS):
+        return JSONResponse({
+            "version": event.get("version", "1.0"),
+            "response": {"text": "Мяу! До встречи!", "tts": "Мяу! До встречи!", "end_session": True}
+        })
     else:
-        response_text = ask_openai(command)
+        text = ask_llm(command)
 
-    return JSONResponse({
-        "version": "1.0",
+    tts = f"Мяу! Кот подсказывает: {text}"
+
+    response = {
+        "version": event.get("version", "1.0"),
         "response": {
-            "text": response_text,
-            "tts": response_text,
+            "text": text,
+            "tts": tts,
             "end_session": False
         }
-    })
+    }
+    print("<< response:", response)
+    return JSONResponse(response)
